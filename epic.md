@@ -222,6 +222,23 @@ VITE_API_BASE_PATH=http://localhost:3000
 
 > **Full Report:** [tasks/task-04-cicd.md](tasks/task-04-cicd.md)
 
+**Known Issues (Pre-existing in Upstream Repo):**
+
+Both repositories have pre-existing test failures that are NOT issues we introduced:
+
+**Backend (31 failed / 98 passed):**
+- Email templates path bug: `email-templates` library looks in `./emails/` but templates are in `./src/emails/`
+- Integration tests try to send real emails via Gmail OAuth with placeholder credentials
+
+**Frontend (30 failed / 141 passed):**
+- `EmailConfirmModal`: `default.mockImplementation is not a function` (5 tests)
+- `GoogleButton/OAuth`: `Cannot read properties of undefined (reading 'accounts')` (20+ tests)
+- React Router: `useNavigation must be used within a data router`
+
+**Workaround Applied:**
+- Frontend CI workflow updated with `if: always()` on build job to run build even when tests fail
+- This ensures we can verify the build works despite pre-existing test issues
+
 ---
 
 ### Progress Tracking
@@ -255,6 +272,9 @@ VITE_API_BASE_PATH=http://localhost:3000
 | 2026-01-12 | Infra | Created infrastructure repo with git history and tags for Tasks 1, 2, 4 |
 | 2026-01-12 | Task 2,4 | Pushed Dockerfiles, CI workflows to component repos (DevOps-ProjectLevel) |
 | 2026-01-12 | Task 4 | Fixed backend CI: removed --ignore-scripts for bcrypt, added JWT expiration env vars |
+| 2026-01-12 | Task 4 | Investigated CI failures: identified pre-existing test bugs in upstream repos |
+| 2026-01-12 | Task 4 | Frontend CI: added `if: always()` to build job to run despite test failures |
+| 2026-01-12 | Task 4 | Docker workflow: fixed to checkout component repos from DevOps-ProjectLevel org |
 
 ---
 

@@ -257,3 +257,90 @@ To activate CI/CD pipelines:
 ```
 
 **Commit:** `dc764b6` - Fix CI workflow: bcrypt bindings and JWT expiration
+
+---
+
+### Pre-existing Test Failures (January 12, 2026)
+
+Both component repositories have pre-existing test failures that were NOT introduced by our CI/CD implementation. These are bugs in the upstream codebase.
+
+#### Backend Test Failures (31 failed / 98 passed)
+
+**Issue 1: Email Templates Path Bug**
+- `email-templates` library defaults to looking in `./emails/`
+- Templates are actually located in `./src/emails/`
+- Error: `ENOENT: no such file or directory, stat '.../emails/en/confirm-email.pug'`
+
+**Issue 2: Integration Tests Send Real Emails**
+- Tests attempt to send actual emails via Gmail OAuth
+- Placeholder credentials in CI cause `EAUTH: invalid_client` errors
+- Tests should mock email service but don't
+
+#### Frontend Test Failures (30 failed / 141 passed)
+
+**Issue 1: Mock Setup Broken (7 tests)**
+- `EmailConfirmModal.spec.jsx`: `default.mockImplementation is not a function`
+- `FeatureBlock.spec.jsx`: Same mock issue
+
+**Issue 2: Google OAuth Not Mocked (20+ tests)**
+- `GoogleButton` component tries to access `accounts` from `@react-oauth/google`
+- Error: `Cannot read properties of undefined (reading 'accounts')`
+- Affects: SignupDialog, LoginDialog, NavBar, GuestHome, etc.
+
+**Issue 3: React Router Data Router**
+- Some tests fail with: `useNavigation must be used within a data router`
+
+**Decision:** These are upstream bugs, not our responsibility to fix. Documented for awareness.
+
+---
+
+### Frontend CI Fix: Build Despite Test Failures (January 12, 2026)
+
+**Issue:** Build job was skipped because it depended on test job passing.
+
+**Root Cause:** Workflow had `needs: test` without `if: always()`, causing build to be skipped when pre-existing tests failed.
+
+**Solution:**
+```diff
+  build:
+    runs-on: ubuntu-latest
+    needs: test
++   if: always()  # Run build even if tests fail (pre-existing test issues in upstream repo)
+```
+
+**Rationale:** Pre-existing test failures should not block us from verifying the build works. The build job is independent and should run regardless.
+
+**Commit:** `847859c` - CI: Run build job even if tests fail
+
+---
+
+### Docker Workflow Fix: Checkout Component Repos (January 12, 2026)
+
+**Issue:** Docker build failing with `path "./space2study-backend" not found`
+
+**Root Cause:** The docker.yml workflow expected component repos to be subdirectories of the infra repo, but on GitHub Actions, only the infra repo is checked out.
+
+**Error:**
+```
+ERROR: failed to build: unable to prepare context: path "./space2study-backend" not found
+ERROR: failed to build: unable to prepare context: path "./space2study-frontend" not found
+```
+
+**Solution:** Add explicit checkout steps for component repos from DevOps-ProjectLevel organization:
+
+```diff
+  steps:
+-   - name: Checkout code
++   - name: Checkout infra repo
+      uses: actions/checkout@v4
+
++   - name: Checkout backend repo
++     uses: actions/checkout@v4
++     with:
++       repository: DevOps-ProjectLevel/space2study-backend-1g0s
++       path: space2study-backend
+```
+
+**Rationale:** The infra repo orchestrates Docker builds but doesn't contain the source code. We must explicitly checkout the component repos into the expected paths.
+
+**Affected Files:** `.github/workflows/docker.yml`
