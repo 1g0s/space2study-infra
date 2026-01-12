@@ -225,6 +225,7 @@ VITE_API_BASE_PATH=http://localhost:3000
 | 2026-01-11 | Task 2 | Fixed bcrypt native binding, swagger-settings; verified full stack (3 containers healthy) |
 | 2026-01-11 | Task 4 | Created GitHub Actions CI/CD workflows for backend, frontend, and Docker builds |
 | 2026-01-12 | Infra | Created infrastructure repo with git history and tags for Tasks 1, 2, 4 |
+| 2026-01-12 | Task 2,4 | Pushed Dockerfiles, CI workflows to component repos (DevOps-ProjectLevel) |
 
 ---
 
