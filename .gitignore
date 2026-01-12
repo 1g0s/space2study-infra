@@ -1,0 +1,33 @@
+# Environment files with secrets
+.env
+.env.prod
+.env.local
+
+# Keep example files
+!.env.example
+!.env.prod.example
+
+# OS files
+.DS_Store
+._.DS_Store
+*/.DS_Store
+*/._.DS_Store
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Subproject directories (separate repos)
+space2study-backend/
+space2study-frontend/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
