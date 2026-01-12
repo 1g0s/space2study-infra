@@ -9,9 +9,13 @@ Node.js 18.14.0
 
 React 17.0.2
 
-Backend Repository git@github.com:DevOps-ProjectLevel/space2study-backend-1g0s.git
+## Repositories
 
-Frontend Repository git@github.com:DevOps-ProjectLevel/space2study-frontend-1g0s.git
+| Repository | Purpose | URL |
+|------------|---------|-----|
+| **space2study-infra** | Infrastructure & DevOps | `git@github.com:DevOps-ProjectLevel/space2study-infra.git` |
+| **space2study-backend** | Node.js Backend API | `git@github.com:DevOps-ProjectLevel/space2study-backend-1g0s.git` |
+| **space2study-frontend** | React Frontend | `git@github.com:DevOps-ProjectLevel/space2study-frontend-1g0s.git` |
 
 ---
 
@@ -50,11 +54,29 @@ Frontend Repository git@github.com:DevOps-ProjectLevel/space2study-frontend-1g0s
 | **Database** | MongoDB 4.2+ | 27017 |
 | **Storage** | Azure Blob Storage | - |
 
-### Existing Infrastructure
+### Infrastructure Repository Structure
+
+```
+space2study-infra/
+├── .github/workflows/
+│   └── docker.yml           # Docker build & push to ghcr.io
+├── docker-compose.yml       # Development environment
+├── docker-compose.prod.yml  # Production deployment
+├── .env.prod.example        # Environment template
+├── epic.md                  # This file
+├── README.md                # Quick start guide
+└── tasks/                   # Task completion reports
+    ├── task-01-setup-webapp.md
+    ├── task-02-containerization.md
+    └── task-04-cicd.md
+```
+
+### Component Repos Include
 - ✅ SonarCloud integration (both repos)
 - ✅ Jest/Vitest testing with coverage
 - ✅ ESLint + Prettier code quality
-- ⚠️ Missing: Dockerfiles, docker-compose, CI/CD pipelines, Kubernetes manifests
+- ✅ Dockerfiles (backend, frontend)
+- ✅ CI workflows (.github/workflows/ci.yml)
 
 ---
 
@@ -202,6 +224,7 @@ VITE_API_BASE_PATH=http://localhost:3000
 | 2026-01-06 | Task 2 | Created Dockerfiles, nginx.conf, health endpoint, docker-compose.prod.yml |
 | 2026-01-11 | Task 2 | Fixed bcrypt native binding, swagger-settings; verified full stack (3 containers healthy) |
 | 2026-01-11 | Task 4 | Created GitHub Actions CI/CD workflows for backend, frontend, and Docker builds |
+| 2026-01-12 | Infra | Created infrastructure repo with git history and tags for Tasks 1, 2, 4 |
 
 ---
 
