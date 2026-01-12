@@ -1,0 +1,30 @@
+version: '3.8'
+
+# Space2Study Development Environment
+# Usage: docker compose up -d
+# Note: Backend and Frontend run natively with Node 18 for hot-reload
+
+services:
+  mongodb:
+    image: mongo:4.2
+    container_name: space2study-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: space2study
+    volumes:
+      - space2study_mongodata:/data/db
+    ports:
+      - "27018:27017"  # External port 27018 to avoid conflict with existing mongodb
+    networks:
+      - space2study-net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  space2study-net:
+    external: true
+
+volumes:
+  space2study_mongodata:
