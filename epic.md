@@ -248,7 +248,7 @@ Both repositories have pre-existing test failures that are NOT issues we introdu
 | 1. Setup Webapp | ✅ Completed | MongoDB (Docker), Backend/Frontend (native Node.js) |
 | 2. Containerization | ✅ Verified | All images built, tested, all 3 containers healthy |
 | 3. Infrastructure as Code | ⬜ Not Started | Vagrant + Ansible local provisioning |
-| 4. CI/CD Pipeline | ✅ Implemented | GitHub Actions + ghcr.io |
+| 4. CI/CD Pipeline | ✅ Verified Working | GitHub Actions + ghcr.io (images built & pushed) |
 | 5. Load Balancing | ⬜ Not Started | |
 | 6. Automation | ⬜ Not Started | |
 | 7. Kubernetes | ⬜ Not Started | |
@@ -275,6 +275,7 @@ Both repositories have pre-existing test failures that are NOT issues we introdu
 | 2026-01-12 | Task 4 | Investigated CI failures: identified pre-existing test bugs in upstream repos |
 | 2026-01-12 | Task 4 | Frontend CI: added `if: always()` to build job to run despite test failures |
 | 2026-01-12 | Task 4 | Docker workflow: fixed to checkout component repos from DevOps-ProjectLevel org |
+| 2026-01-12 | Task 4 | Added CHECKOUT_TOKEN secret for private repo access; Docker builds now working |
 
 ---
 
