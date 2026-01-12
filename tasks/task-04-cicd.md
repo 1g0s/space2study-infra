@@ -84,7 +84,7 @@ graph TB
 1. **test** - Run tests with MongoDB service
    - Checkout code
    - Setup Node.js 18
-   - Install dependencies (`npm ci --ignore-scripts`)
+   - Install dependencies (`npm ci`)
    - Run linter (`npm run lint`)
    - Run tests (`npm test`) with MongoDB service container
    - Upload coverage artifact
@@ -97,9 +97,13 @@ graph TB
 MONGODB_URL: mongodb://localhost:27017/space2study-test
 SERVER_PORT: 3000
 JWT_ACCESS_SECRET: test-access-secret
+JWT_ACCESS_EXPIRES_IN: 15m
 JWT_REFRESH_SECRET: test-refresh-secret
+JWT_REFRESH_EXPIRES_IN: 7d
 JWT_RESET_SECRET: test-reset-secret
+JWT_RESET_EXPIRES_IN: 1h
 JWT_CONFIRM_SECRET: test-confirm-secret
+JWT_CONFIRM_EXPIRES_IN: 24h
 ```
 
 ---
@@ -215,9 +219,41 @@ To activate CI/CD pipelines:
 
 ## Next Steps
 
-- [ ] Push workflows to GitHub repositories
+- [x] Push workflows to GitHub repositories
 - [ ] Verify CI workflows pass
 - [ ] Verify Docker builds complete
 - [ ] Enable branch protection rules
 - [ ] (Optional) Add SonarCloud integration
 - [ ] Task 5: Load Balancing
+
+---
+
+## Fixes Applied
+
+### Backend CI Fix (January 12, 2026)
+
+**Issue:** CI workflow failing with two errors:
+1. `Cannot find module 'bcrypt/lib/binding/napi-v3/bcrypt_lib.node'`
+2. `"expiresIn" should be a number of seconds or string representing a timespan`
+
+**Root Cause:**
+1. `npm ci --ignore-scripts` prevented bcrypt from compiling native bindings
+2. JWT expiration environment variables were missing (only secrets were set)
+
+**Solution:**
+```diff
+- run: npm ci --ignore-scripts
++ run: npm ci
+
+  env:
+    JWT_ACCESS_SECRET: test-access-secret
++   JWT_ACCESS_EXPIRES_IN: 15m
+    JWT_REFRESH_SECRET: test-refresh-secret
++   JWT_REFRESH_EXPIRES_IN: 7d
+    JWT_RESET_SECRET: test-reset-secret
++   JWT_RESET_EXPIRES_IN: 1h
+    JWT_CONFIRM_SECRET: test-confirm-secret
++   JWT_CONFIRM_EXPIRES_IN: 24h
+```
+
+**Commit:** `dc764b6` - Fix CI workflow: bcrypt bindings and JWT expiration
