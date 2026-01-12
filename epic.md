@@ -13,7 +13,7 @@ React 17.0.2
 
 | Repository | Purpose | URL |
 |------------|---------|-----|
-| **space2study-infra** | Infrastructure & DevOps | `git@github.com:DevOps-ProjectLevel/space2study-infra.git` |
+| **space2study-infra** | Infrastructure & DevOps | `git@github.com:1g0s/space2study-infra.git` |
 | **space2study-backend** | Node.js Backend API | `git@github.com:DevOps-ProjectLevel/space2study-backend-1g0s.git` |
 | **space2study-frontend** | React Frontend | `git@github.com:DevOps-ProjectLevel/space2study-frontend-1g0s.git` |
 
