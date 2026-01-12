@@ -23,6 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: DevOps-ProjectLevel/space2study-backend-1g0s
+          token: ${{ secrets.CHECKOUT_TOKEN }}
           path: space2study-backend
 
       - name: Set up Docker Buildx
@@ -69,6 +70,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: DevOps-ProjectLevel/space2study-frontend-1g0s
+          token: ${{ secrets.CHECKOUT_TOKEN }}
           path: space2study-frontend
 
       - name: Set up Docker Buildx
