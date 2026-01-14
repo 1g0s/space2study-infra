@@ -1,0 +1,47 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Space2Study VM - Infrastructure as Code
+# Usage: vagrant up
+
+Vagrant.configure("2") do |config|
+  config.vm.define "space2study-vm" do |vm|
+    vm.vm.box = "ubuntu/jammy64"
+    vm.vm.hostname = "space2study-vm"
+
+    # Network - Private network with static IP
+    # Using 192.168.10.x range (allowed by /etc/vbox/networks.conf)
+    vm.vm.network "private_network", ip: "192.168.10.10"
+
+    # VirtualBox provider settings
+    vm.vm.provider "virtualbox" do |vb|
+      vb.name = "space2study-vm"
+      vb.memory = 4096
+      vb.cpus = 2
+      vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    end
+
+    # Sync ansible directory to VM
+    vm.vm.synced_folder "../ansible", "/vagrant/ansible"
+
+    # Sync application source code (local repos instead of GitHub)
+    vm.vm.synced_folder "../space2study-backend", "/vagrant/space2study-backend"
+    vm.vm.synced_folder "../space2study-frontend", "/vagrant/space2study-frontend"
+    vm.vm.synced_folder "../nginx", "/vagrant/nginx"
+    vm.vm.synced_folder "../frontend-static", "/vagrant/frontend-static"
+
+    # Ansible Local provisioner (runs inside VM)
+    vm.vm.provision "ansible_local" do |ansible|
+      ansible.playbook = "ansible/playbook.yml"
+      ansible.provisioning_path = "/vagrant"
+      ansible.verbose = "v"
+      ansible.install_mode = "pip3"
+      ansible.galaxy_role_file = "ansible/requirements.yml"
+      ansible.galaxy_roles_path = "/home/vagrant/.ansible/collections"
+      ansible.galaxy_command = "ansible-galaxy collection install -r %{role_file} -p %{roles_path}"
+      ansible.extra_vars = {
+        ansible_python_interpreter: "/usr/bin/python3"
+      }
+    end
+  end
+end

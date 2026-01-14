@@ -1,0 +1,42 @@
+---
+# Space2Study Global Variables
+
+# Application settings
+app_name: space2study
+app_user: vagrant
+app_dir: /home/vagrant/app
+docker_compose_file: docker-compose.lb.yml
+
+# MongoDB credentials
+mongo_user: admin
+mongo_password: mongo123
+
+# JWT Secrets (for testing - use vault in production)
+jwt_access_secret: access_secret_for_testing_only_change_in_prod
+jwt_refresh_secret: refresh_secret_for_testing_only_change_in_prod
+jwt_reset_secret: reset_secret
+jwt_confirm_secret: confirm_secret
+
+# Network
+vm_ip: 192.168.10.10
+client_url: "http://{{ vm_ip }}"
+cookie_domain: "{{ vm_ip }}"
+
+# Docker images (will be built locally)
+backend_image: space2study-backend:prod
+frontend_image: space2study-frontend:prod
+
+# Git repositories for building images
+backend_repo: https://github.com/DevOps-ProjectLevel/space2study-backend-1g0s.git
+frontend_repo: https://github.com/DevOps-ProjectLevel/space2study-frontend-1g0s.git
+
+# Packages to install
+base_packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - software-properties-common
+  - git
+  - python3-pip

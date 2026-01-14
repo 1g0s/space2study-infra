@@ -189,29 +189,92 @@ VITE_API_BASE_PATH=http://localhost:3000
 
 ### Task 3: Infrastructure as Code (Vagrant + Ansible)
 
-**Objective:** Provision local development/test infrastructure using Infrastructure as Code tools
+**Objective:** Provision clean VM infrastructure and deploy the load-balanced application using IaC tools
+
+**Deployment:** VirtualBox VMs on z6, provisioned by Vagrant, configured by Ansible
+
+**Architecture:**
+```
+z6 Host (192.168.1.115)
+┌────────────────────────────────────────────────────────────────┐
+│  VirtualBox                                                    │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  space2study-vm (Ubuntu 22.04)                           │  │
+│  │  IP: 192.168.56.10                                       │  │
+│  │  ┌────────────────────────────────────────────────────┐  │  │
+│  │  │  Docker                                            │  │  │
+│  │  │  ├── nginx (load balancer) :80                     │  │  │
+│  │  │  ├── backend1, backend2, backend3 :3000            │  │  │
+│  │  │  └── mongodb :27017                                │  │  │
+│  │  └────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────┘
+```
 
 **Requirements:**
-- Vagrant for VM provisioning (VirtualBox provider)
-- Ansible for configuration management and application deployment
-- Reproducible local environment that mirrors production
+- Vagrant 2.x with VirtualBox provider
+- Ansible 2.9+ on z6 (control node)
+- Clean Ubuntu 22.04 base box
+- SSH key-based authentication
 
 **Deliverables:**
-- [ ] Vagrantfile - Define VM(s) for the application stack
-- [ ] Ansible inventory - Host definitions
-- [ ] Ansible playbooks - Provision and deploy application
-  - [ ] Install Docker and dependencies
-  - [ ] Deploy MongoDB container
-  - [ ] Deploy backend container
-  - [ ] Deploy frontend container
-- [ ] README for IaC setup instructions
+- [ ] `vagrant/Vagrantfile` - VM definition (Ubuntu 22.04, 2 CPU, 4GB RAM)
+- [ ] `ansible/inventory.yml` - Host definitions
+- [ ] `ansible/playbook.yml` - Main deployment playbook
+- [ ] `ansible/roles/docker/` - Install Docker and Docker Compose
+- [ ] `ansible/roles/app/` - Deploy application stack
+- [ ] `ansible/group_vars/` - Environment variables and secrets
+- [ ] `README-iac.md` - Setup instructions
 
-**Infrastructure:**
-| VM | Purpose | Resources |
-|----|---------|-----------|
-| space2study-vm | Full stack deployment | 2 CPU, 4GB RAM |
+**Implementation Steps:**
+
+1. **Create Vagrantfile**
+   ```ruby
+   Vagrant.configure("2") do |config|
+     config.vm.box = "ubuntu/jammy64"
+     config.vm.hostname = "space2study-vm"
+     config.vm.network "private_network", ip: "192.168.56.10"
+     config.vm.provider "virtualbox" do |vb|
+       vb.memory = "4096"
+       vb.cpus = 2
+     end
+     config.vm.provision "ansible" do |ansible|
+       ansible.playbook = "../ansible/playbook.yml"
+     end
+   end
+   ```
+
+2. **Create Ansible Playbook**
+   - Install Docker and Docker Compose
+   - Copy docker-compose.lb.yml and nginx config
+   - Pull images from ghcr.io
+   - Start the application stack
+
+3. **Verify Deployment**
+   ```bash
+   vagrant up
+   curl http://192.168.56.10/api/health
+   ```
+
+**Verification Commands:**
+```bash
+# Start VM and provision
+cd vagrant && vagrant up
+
+# SSH into VM
+vagrant ssh
+
+# Check application status
+curl http://192.168.56.10/api/health
+curl http://192.168.56.10/nginx-health
+
+# Destroy and recreate (test reproducibility)
+vagrant destroy -f && vagrant up
+```
 
 **Status:** ⬜ Not Started
+
+> **Full Report:** [tasks/task-03-iac.md](tasks/task-03-iac.md)
 
 ---
 
@@ -405,6 +468,7 @@ All detailed task completion reports are maintained in the `tasks/` directory:
 |------|--------|
 | Task 1: Setup Webapp | [tasks/task-01-setup-webapp.md](tasks/task-01-setup-webapp.md) |
 | Task 2: Containerization | [tasks/task-02-containerization.md](tasks/task-02-containerization.md) |
+| Task 3: Infrastructure as Code | [tasks/task-03-iac.md](tasks/task-03-iac.md) |
 | Task 4: CI/CD Pipeline | [tasks/task-04-cicd.md](tasks/task-04-cicd.md) |
 | Task 5: Load Balancing | [tasks/task-05-load-balancing.md](tasks/task-05-load-balancing.md) |
 

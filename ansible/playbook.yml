@@ -1,0 +1,38 @@
+---
+# Space2Study Infrastructure Playbook
+# Deploys complete application stack with load balancing
+
+- name: Configure Space2Study VM
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: Wait for system to become ready
+      wait_for_connection:
+        timeout: 60
+
+    - name: Gather facts
+      setup:
+
+  roles:
+    - role: common
+      tags: [common, base]
+
+    - role: docker
+      tags: [docker]
+
+    - role: app
+      tags: [app, deploy]
+
+  post_tasks:
+    - name: Display access information
+      debug:
+        msg:
+          - "Space2Study deployment complete!"
+          - "Access the application at: http://192.168.56.10"
+          - "Load balancer status: http://192.168.56.10/lb-status"
+          - "Containers running: nginx + 3 backends + mongodb"
