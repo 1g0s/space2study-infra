@@ -27,9 +27,10 @@ React 17.0.2
 3. Implement Infrastructure as Code (Vagrant + Ansible)
 4. Implement a Continuous Integration/Continuous Delivery
 5. Setup Load Balancing for Webapp
-   - Deploy couple servers
-   - Set up Apache or Nginx as a load balancer
-   - Try different load-balancing algorithms and options
+   - Deploy multiple backend instances
+   - Set up Nginx as a load balancer
+   - Configure and test different load-balancing algorithms (round-robin, least_conn, ip_hash)
+   - Implement health checks and failover
 6. Implement Automatisation Setup a Webapp
 7. Orchestration Web Application via k8s
 8. Migrate an Application to the Cloud
@@ -61,14 +62,19 @@ space2study-infra/
 ├── .github/workflows/
 │   └── docker.yml           # Docker build & push to ghcr.io
 ├── docker-compose.yml       # Development environment
-├── docker-compose.prod.yml  # Production deployment
+├── docker-compose.prod.yml  # Production deployment (single instance)
+├── docker-compose.lb.yml    # Load-balanced deployment (5 containers)
+├── nginx/
+│   └── nginx-lb.conf        # Nginx load balancer config
+├── frontend-static/         # Extracted frontend for nginx LB
 ├── .env.prod.example        # Environment template
 ├── epic.md                  # This file
 ├── README.md                # Quick start guide
 └── tasks/                   # Task completion reports
     ├── task-01-setup-webapp.md
     ├── task-02-containerization.md
-    └── task-04-cicd.md
+    ├── task-04-cicd.md
+    └── task-05-load-balancing.md
 ```
 
 ### Component Repos Include
@@ -241,6 +247,115 @@ Both repositories have pre-existing test failures that are NOT issues we introdu
 
 ---
 
+### Task 5: Load Balancing
+
+**Objective:** Set up Nginx load balancer to distribute traffic across multiple backend instances
+
+**Deployment:** Local Docker on z6 (192.168.1.115) - all containers on single host
+
+**Architecture:**
+```
+z6 Host (192.168.1.115)
+┌─────────────────────────────────────────────────────────────┐
+│  Docker Network: space2study-lb-net                         │
+│                                                             │
+│    ┌─────────────────┐                                      │
+│    │   Nginx LB      │ ← Port 80 exposed to host            │
+│    │   (port 80)     │                                      │
+│    └────────┬────────┘                                      │
+│             │                                               │
+│             │ /api/* → upstream backend_pool                │
+│             │                                               │
+│  ┌──────────┼──────────┬──────────┐                         │
+│  │          │          │          │                         │
+│  ▼          ▼          ▼          │                         │
+│ ┌────────┐ ┌────────┐ ┌────────┐  │                         │
+│ │backend1│ │backend2│ │backend3│  │                         │
+│ │ :3000  │ │ :3000  │ │ :3000  │  │ (internal ports only)   │
+│ └───┬────┘ └───┬────┘ └───┬────┘  │                         │
+│     │          │          │       │                         │
+│     └──────────┼──────────┘       │                         │
+│                │                  │                         │
+│                ▼                  │                         │
+│       ┌─────────────────┐         │                         │
+│       │    MongoDB      │ ← Port 27017 (internal)           │
+│       │   (port 27017)  │                                   │
+│       └─────────────────┘                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Requirements:**
+- Nginx as reverse proxy and load balancer
+- Multiple backend instances (3 recommended for testing)
+- Health checks for automatic failover
+- Session persistence option (ip_hash) for stateful scenarios
+- Logging to track request distribution
+
+**Deliverables:**
+- [x] `nginx/nginx-lb.conf` - Load balancer configuration with least_conn
+- [x] `docker-compose.lb.yml` - Multi-instance deployment (5 containers)
+- [x] Health check endpoint verification (`/health`) - Working
+- [x] `frontend-static/` - Extracted frontend files for nginx
+- [x] Failover verification - Tested and documented
+
+**Load Balancing Algorithms to Test:**
+
+| Algorithm | Use Case | Configuration |
+|-----------|----------|---------------|
+| Round Robin | Default, equal distribution | (default) |
+| Least Connections | Uneven request processing times | `least_conn;` |
+| IP Hash | Session persistence | `ip_hash;` |
+| Weighted | Servers with different capacities | `server backend:3001 weight=3;` |
+
+**Implementation Steps:**
+
+1. **Create Load Balancer Config**
+   ```nginx
+   upstream backend_servers {
+       # Algorithm directive here (least_conn, ip_hash, etc.)
+       server backend1:3000;
+       server backend2:3000;
+       server backend3:3000;
+   }
+   ```
+
+2. **Update Docker Compose for Multiple Instances**
+   - Scale backend service: `docker compose up -d --scale backend=3`
+   - Or define explicit instances in docker-compose.lb.yml
+
+3. **Configure Health Checks**
+   ```nginx
+   upstream backend_servers {
+       server backend1:3000 max_fails=3 fail_timeout=30s;
+       server backend2:3000 max_fails=3 fail_timeout=30s;
+       server backend3:3000 max_fails=3 fail_timeout=30s;
+   }
+   ```
+
+4. **Test Each Algorithm**
+   - Round Robin: Verify equal distribution with curl loop
+   - Least Connections: Simulate slow requests
+   - IP Hash: Verify same client goes to same backend
+
+**Verification Commands:**
+```bash
+# Test load distribution (run multiple times)
+for i in {1..10}; do curl -s http://localhost/api/health | jq .server; done
+
+# Check Nginx upstream status
+docker exec nginx cat /var/log/nginx/access.log | tail -20
+
+# Simulate backend failure
+docker stop space2study-backend-2
+# Verify traffic redirects to healthy backends
+```
+
+**Status:** ✅ COMPLETE (January 12, 2026)
+
+> **Full Report:** [tasks/task-05-load-balancing.md](tasks/task-05-load-balancing.md)
+
+---
+
 ### Progress Tracking
 
 | Task | Status | Notes |
@@ -249,7 +364,7 @@ Both repositories have pre-existing test failures that are NOT issues we introdu
 | 2. Containerization | ✅ Verified | All images built, tested, all 3 containers healthy |
 | 3. Infrastructure as Code | ⬜ Not Started | Vagrant + Ansible local provisioning |
 | 4. CI/CD Pipeline | ✅ Verified Working | GitHub Actions + ghcr.io (images built & pushed) |
-| 5. Load Balancing | ⬜ Not Started | |
+| 5. Load Balancing | ✅ Complete | 3 backend instances, nginx LB, failover working |
 | 6. Automation | ⬜ Not Started | |
 | 7. Kubernetes | ⬜ Not Started | |
 | 8. Cloud Migration | ⬜ Not Started | |
@@ -276,6 +391,9 @@ Both repositories have pre-existing test failures that are NOT issues we introdu
 | 2026-01-12 | Task 4 | Frontend CI: added `if: always()` to build job to run despite test failures |
 | 2026-01-12 | Task 4 | Docker workflow: fixed to checkout component repos from DevOps-ProjectLevel org |
 | 2026-01-12 | Task 4 | Added CHECKOUT_TOKEN secret for private repo access; Docker builds now working |
+| 2026-01-12 | Task 5 | Created nginx-lb.conf and docker-compose.lb.yml for load balancing |
+| 2026-01-12 | Task 5 | Deployed 3 backend instances + nginx LB on port 8080 |
+| 2026-01-12 | Task 5 | Verified least_conn algorithm and failover working |
 
 ---
 
@@ -288,4 +406,5 @@ All detailed task completion reports are maintained in the `tasks/` directory:
 | Task 1: Setup Webapp | [tasks/task-01-setup-webapp.md](tasks/task-01-setup-webapp.md) |
 | Task 2: Containerization | [tasks/task-02-containerization.md](tasks/task-02-containerization.md) |
 | Task 4: CI/CD Pipeline | [tasks/task-04-cicd.md](tasks/task-04-cicd.md) |
+| Task 5: Load Balancing | [tasks/task-05-load-balancing.md](tasks/task-05-load-balancing.md) |
 

@@ -1,0 +1,162 @@
+version: '3.8'
+
+# Space2Study Load Balanced Environment
+# Usage: docker compose -f docker-compose.lb.yml up -d
+# Requires: .env.prod file with secrets, local images (space2study-backend:prod, space2study-frontend:prod)
+
+services:
+  # Nginx Load Balancer + Frontend Static Files
+  nginx:
+    image: nginx:alpine
+    container_name: space2study-lb
+    ports:
+      - "8080:80"  # Using 8080 to avoid conflict with existing services on port 80
+    volumes:
+      - ./nginx/nginx-lb.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend-static:/usr/share/nginx/html:ro
+    depends_on:
+      backend1:
+        condition: service_healthy
+      backend2:
+        condition: service_healthy
+      backend3:
+        condition: service_healthy
+    networks:
+      - space2study-lb-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Backend Instance 1
+  backend1:
+    image: space2study-backend:prod
+    container_name: space2study-backend-1
+    hostname: backend1
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: 3000
+      SERVER_ID: backend-1
+      SERVER_URL: http://backend1:3000
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:8080}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-localhost}
+      MONGODB_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-mongo123}@mongodb:27017/space2study?authSource=admin
+      # JWT Secrets
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-access_secret_for_testing}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-refresh_secret_for_testing}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET:-reset_secret}
+      JWT_RESET_EXPIRES_IN: ${JWT_RESET_EXPIRES_IN:-1h}
+      JWT_CONFIRM_SECRET: ${JWT_CONFIRM_SECRET:-confirm_secret}
+      JWT_CONFIRM_EXPIRES_IN: ${JWT_CONFIRM_EXPIRES_IN:-24h}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - space2study-lb-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Backend Instance 2
+  backend2:
+    image: space2study-backend:prod
+    container_name: space2study-backend-2
+    hostname: backend2
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: 3000
+      SERVER_ID: backend-2
+      SERVER_URL: http://backend2:3000
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:8080}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-localhost}
+      MONGODB_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-mongo123}@mongodb:27017/space2study?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-access_secret_for_testing}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-refresh_secret_for_testing}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET:-reset_secret}
+      JWT_RESET_EXPIRES_IN: ${JWT_RESET_EXPIRES_IN:-1h}
+      JWT_CONFIRM_SECRET: ${JWT_CONFIRM_SECRET:-confirm_secret}
+      JWT_CONFIRM_EXPIRES_IN: ${JWT_CONFIRM_EXPIRES_IN:-24h}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - space2study-lb-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Backend Instance 3
+  backend3:
+    image: space2study-backend:prod
+    container_name: space2study-backend-3
+    hostname: backend3
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: 3000
+      SERVER_ID: backend-3
+      SERVER_URL: http://backend3:3000
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:8080}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-localhost}
+      MONGODB_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-mongo123}@mongodb:27017/space2study?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-access_secret_for_testing}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-refresh_secret_for_testing}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET:-reset_secret}
+      JWT_RESET_EXPIRES_IN: ${JWT_RESET_EXPIRES_IN:-1h}
+      JWT_CONFIRM_SECRET: ${JWT_CONFIRM_SECRET:-confirm_secret}
+      JWT_CONFIRM_EXPIRES_IN: ${JWT_CONFIRM_EXPIRES_IN:-24h}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - space2study-lb-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # MongoDB (shared by all backends)
+  mongodb:
+    image: mongo:4.4
+    container_name: space2study-lb-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: space2study
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongo123}
+    volumes:
+      - space2study_lb_mongodata:/data/db
+    networks:
+      - space2study-lb-net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  space2study-lb-net:
+    driver: bridge
+    name: space2study-lb-net
+
+volumes:
+  space2study_lb_mongodata:
+    name: space2study_lb_mongodata
