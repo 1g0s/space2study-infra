@@ -1,0 +1,105 @@
+# Security scanning workflow for Space2Study Infrastructure
+# Uses Trivy for IaC (Terraform) misconfiguration detection
+
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'k8s/**'
+      - 'ansible/**'
+      - 'docker-compose*.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'k8s/**'
+      - 'ansible/**'
+      - 'docker-compose*.yml'
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly Monday 6am UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy-iac-terraform:
+    name: Trivy IaC Scan (Terraform)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy IaC scanner (Terraform)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: './terraform'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          format: 'sarif'
+          output: 'trivy-terraform-results.sarif'
+          ignore-unfixed: true
+
+      - name: Upload Trivy Terraform scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-terraform-results.sarif'
+          category: 'terraform-scan'
+
+  trivy-iac-k8s:
+    name: Trivy IaC Scan (Kubernetes)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy IaC scanner (Kubernetes manifests)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: './k8s'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          format: 'sarif'
+          output: 'trivy-k8s-results.sarif'
+          ignore-unfixed: true
+
+      - name: Upload Trivy Kubernetes scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-k8s-results.sarif'
+          category: 'kubernetes-scan'
+
+  trivy-iac-docker-compose:
+    name: Trivy IaC Scan (Docker Compose)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy IaC scanner (Docker Compose)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          format: 'table'
+          scanners: 'misconfig'
+        continue-on-error: true
+
+  tfsec-scan:
+    name: tfsec Terraform Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: ./terraform
+          soft_fail: true
