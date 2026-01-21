@@ -32,8 +32,13 @@ React 17.0.2
    - Configure and test different load-balancing algorithms (round-robin, least_conn, ip_hash)
    - Implement health checks and failover
 6. Implement Automatisation Setup a Webapp
-7. Orchestration Web Application via k8s
+7. Orchestration Web Application via k8s (optional - local learning)
 8. Migrate an Application to the Cloud
+9. Security & Vulnerability Scanning
+   - Enable GitHub security features (Dependabot, Secret Scanning)
+   - Implement container vulnerability scanning (Trivy)
+   - Add static code analysis (CodeQL)
+   - Scan Terraform/IaC for misconfigurations
 
 ### Additional Tasks
 - Set up monitoring tools for application performance and infrastructure health
@@ -54,6 +59,53 @@ React 17.0.2
 | **space2study-frontend** | React 17.0.2, Vite, TypeScript | 3000 (dev) / 80 (prod) |
 | **Database** | MongoDB 4.2+ | 27017 |
 | **Storage** | Azure Blob Storage | - |
+
+### DevOps Journey
+
+```mermaid
+flowchart LR
+    subgraph Local["Local Development"]
+        T1[Task 1: Setup]
+        T2[Task 2: Docker]
+    end
+
+    subgraph OnPrem["On-Premises (z6)"]
+        T3[Task 3: IaC]
+        T4[Task 4: CI/CD]
+        T5[Task 5: Load Balance]
+        T6[Task 6: Automation]
+    end
+
+    subgraph Cloud["AWS Cloud"]
+        T7[Task 7: K8s Local]
+        T8[Task 8: Full Cloud]
+    end
+
+    T1 --> T2 --> T3 --> T4 --> T5 --> T6 --> T7 -.->|optional| T8
+    T6 --> T8
+```
+
+### Target AWS Architecture (Task 8)
+
+```mermaid
+flowchart TB
+    User([Users]) --> ALB[Application Load Balancer]
+
+    subgraph AWS["AWS eu-west-1"]
+        subgraph EKS["EKS Cluster"]
+            FE[Frontend Pods]
+            BE[Backend Pods x3]
+        end
+        ALB --> FE
+        ALB --> BE
+        BE --> DocDB[(DocumentDB)]
+    end
+
+    subgraph DevOps["CI/CD"]
+        GH[GitHub Actions] --> ECR[ECR Registry]
+        ECR --> EKS
+    end
+```
 
 ### Infrastructure Repository Structure
 
@@ -419,22 +471,619 @@ docker stop space2study-backend-2
 
 ---
 
+### Task 6: Automation
+
+**Objective:** Create operations scripts for unified management of all deployment environments
+
+**Deployment Environments:**
+| Environment | Config File | Description |
+|-------------|-------------|-------------|
+| `prod` | docker-compose.prod.yml | Single instance production |
+| `lb` | docker-compose.lb.yml | Load-balanced (3 backends) |
+| `vm` | vagrant/Vagrantfile | Vagrant VM at 192.168.10.10 |
+
+**Architecture:**
+```
+scripts/
+├── ops.sh              # Main operations script
+├── health-check.sh     # Health monitoring
+├── backup.sh           # Database backup
+└── restore.sh          # Database restore
+
+ops.sh [command] [environment]
+├── start   → Start services (prod|lb|vm)
+├── stop    → Stop services
+├── status  → Show container/service status
+├── logs    → View service logs
+├── health  → Run health checks
+├── deploy  → Full deployment (pull + start)
+├── restart → Restart services
+└── cleanup → Remove stopped containers, images
+```
+
+**Deliverables:**
+- [ ] `scripts/ops.sh` - Main operations script with subcommands
+- [ ] `scripts/health-check.sh` - Automated health monitoring
+- [ ] `scripts/backup.sh` - MongoDB backup script
+- [ ] `scripts/restore.sh` - MongoDB restore script
+- [ ] Environment-aware operations (prod, lb, vm)
+- [ ] Color-coded output with status indicators
+- [ ] Error handling and validation
+
+**ops.sh Commands:**
+
+```bash
+# Start services
+./scripts/ops.sh start prod    # Single instance
+./scripts/ops.sh start lb      # Load balanced
+./scripts/ops.sh start vm      # Vagrant VM
+
+# Stop services
+./scripts/ops.sh stop lb
+
+# View status
+./scripts/ops.sh status lb
+
+# View logs
+./scripts/ops.sh logs backend1
+
+# Health check
+./scripts/ops.sh health lb
+
+# Full deployment
+./scripts/ops.sh deploy lb
+
+# Cleanup
+./scripts/ops.sh cleanup
+```
+
+**Health Check Features:**
+- Container status verification
+- Endpoint accessibility (/, /api/health, /nginx-health)
+- Response time measurement
+- Load balancer distribution check
+- Automatic alerting on failures
+
+**Backup/Restore Features:**
+- MongoDB dump to timestamped archives
+- Restore from backup file
+- Support for all environments
+
+**Verification Commands:**
+```bash
+# Test all operations
+./scripts/ops.sh start lb
+./scripts/ops.sh status lb
+./scripts/ops.sh health lb
+./scripts/ops.sh logs backend1
+./scripts/ops.sh stop lb
+
+# Test backup/restore
+./scripts/backup.sh lb
+./scripts/restore.sh backups/mongodb-2026-01-14.tar.gz lb
+
+# Test VM operations
+./scripts/ops.sh start vm
+./scripts/ops.sh health vm
+./scripts/ops.sh stop vm
+```
+
+**Status:** ✅ Complete (January 14, 2026)
+
+> **Full Report:** [tasks/task-06-automation.md](tasks/task-06-automation.md)
+
+---
+
+### Task 7: Kubernetes (Local) - Optional
+
+**Objective:** Learn Kubernetes fundamentals with local cluster (minikube/kind)
+
+**Scope:**
+- Deploy application to local Kubernetes cluster
+- Learn pods, deployments, services, ingress
+- Practice kubectl commands
+- Prepare for cloud EKS deployment
+
+**Note:** This task is optional. Task 8 includes full EKS deployment which covers Kubernetes concepts in a cloud context.
+
+**Status:** ⬜ Optional
+
+---
+
+### Task 8: Cloud Migration (AWS)
+
+**Objective:** Deploy application to AWS using production-grade infrastructure with EKS, managed database, and Terraform
+
+**Infrastructure:**
+| Component | AWS Service | Est. Cost |
+|-----------|-------------|-----------|
+| Kubernetes | EKS | $73/mo |
+| Compute | EC2 (t3.medium x2) | $60/mo |
+| Database | DocumentDB | $55/mo |
+| Load Balancer | ALB | $20/mo |
+| Networking | NAT Gateway | $32/mo |
+| **Total** | | **~$250/mo** |
+
+**Deliverables:**
+- [x] Terraform infrastructure (VPC, EKS, DocumentDB, ALB)
+- [x] Kubernetes manifests (deployments, services, ingress)
+- [x] CI/CD integration (GitHub Actions → ECR → EKS)
+- [x] Secrets Manager integration
+- [x] Helper scripts (deploy.sh, destroy.sh, push-images.sh)
+
+**Deployment Summary:**
+| Resource | Status |
+|----------|--------|
+| EKS Cluster (v1.28) | ✅ Deployed → 🗑️ Destroyed |
+| DocumentDB | ✅ Connected → 🗑️ Destroyed |
+| Backend (3 replicas) | ✅ Running → 🗑️ Destroyed |
+| Frontend (1 replica) | ✅ Running → 🗑️ Destroyed |
+| ALB Ingress | ✅ Active → 🗑️ Destroyed |
+
+**Deployment Verified:** Application was accessible and health checks passed.
+
+**Cleanup:** All resources destroyed after verification to avoid ongoing costs (~$250/mo).
+
+**Status:** ✅ COMPLETED (January 18, 2026) - Verified & Cleaned Up
+
+> **Full Report:** [tasks/task-08-cloud-migration.md](tasks/task-08-cloud-migration.md)
+
+---
+
+### Task 9: Security & Vulnerability Scanning
+
+**Objective:** Implement comprehensive security scanning across all repositories
+
+**Tools Implemented:**
+| Tool | Purpose | Status |
+|------|---------|--------|
+| Dependabot | Dependency vulnerability alerts + auto-fix PRs | ✅ Configured |
+| Secret Scanning | Detect leaked API keys, tokens, passwords | ⬜ Manual enable required |
+| CodeQL | Static code analysis (SAST) for JavaScript | ✅ Configured |
+| Trivy | Container & Terraform scanning | ✅ Configured |
+| tfsec | Terraform security scanner | ✅ Configured |
+
+**Repositories Configured:**
+
+| Repository | dependabot.yml | security.yml | codeql.yml |
+|------------|----------------|--------------|------------|
+| space2study-backend | ✅ npm, docker, github-actions | ✅ Trivy (repo + container) | ✅ JavaScript |
+| space2study-frontend | ✅ npm, docker, github-actions | ✅ Trivy (repo + container) | ✅ JavaScript |
+| space2study-infra | ✅ terraform, docker, github-actions | ✅ Trivy IaC + tfsec | N/A |
+
+**Deliverables:**
+- [x] Add dependabot.yml (all 3 repos)
+- [x] Add security.yml workflow - Trivy (all 3 repos)
+- [x] Add codeql.yml workflow - JavaScript SAST (backend, frontend)
+- [ ] Enable Dependabot Alerts in GitHub Settings (manual)
+- [ ] Enable Secret Scanning in GitHub Settings (manual)
+- [ ] Review and fix security findings
+
+**Status:** ✅ In Progress (Workflows deployed, manual GitHub settings pending)
+
+> **Full Report:** [tasks/task-09-security.md](tasks/task-09-security.md)
+
+---
+
+### Task 10: Monitoring
+
+**Objective:** Set up monitoring tools for application performance and infrastructure health
+
+**Stack:**
+| Component | Tool | Purpose |
+|-----------|------|---------|
+| Infrastructure | CloudWatch | AWS resource metrics (EKS, DocumentDB, ALB) |
+| Application | Prometheus + Grafana | Custom metrics, dashboards |
+| APM | New Relic / Datadog (optional) | Application performance monitoring |
+| Uptime | UptimeRobot / Pingdom | External availability monitoring |
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Monitoring Stack                                           │
+│                                                             │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │ Prometheus  │───▶│  Grafana    │───▶│  Alerts     │     │
+│  │  (scrape)   │    │ (visualize) │    │ (Slack/PD)  │     │
+│  └──────┬──────┘    └─────────────┘    └─────────────┘     │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Metrics Endpoints                                   │   │
+│  │  • Backend: /metrics (prom-client)                   │   │
+│  │  • Node.js: process metrics, HTTP metrics            │   │
+│  │  • Custom: request latency, error rates, DB queries  │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Deliverables:**
+- [ ] Install prom-client in backend for Prometheus metrics
+- [ ] Add /metrics endpoint exposing Node.js and custom metrics
+- [ ] Deploy Prometheus to EKS (Helm chart)
+- [ ] Deploy Grafana with pre-configured dashboards
+- [ ] Configure CloudWatch alarms for critical metrics
+- [ ] Set up alerting (Slack/PagerDuty integration)
+- [ ] Create runbook for common alerts
+
+**Key Metrics to Monitor:**
+| Category | Metrics |
+|----------|---------|
+| HTTP | Request rate, latency (p50/p95/p99), error rate (4xx/5xx) |
+| Node.js | Event loop lag, heap usage, GC frequency |
+| Database | Connection pool, query latency, slow queries |
+| Infrastructure | CPU, memory, disk, network I/O |
+| Business | Active users, API calls per endpoint |
+
+**Status:** ⬜ Not Started
+
+> **Full Report:** [tasks/task-10-monitoring.md](tasks/task-10-monitoring.md)
+
+---
+
+### Task 11: Logging
+
+**Objective:** Configure centralized logging for tracking application and system logs
+
+**Stack:**
+| Component | Tool | Purpose |
+|-----------|------|---------|
+| Application | Winston | Structured JSON logging |
+| Collection | Fluent Bit | Log shipping from containers |
+| Storage | CloudWatch Logs / ELK | Centralized log storage |
+| Analysis | CloudWatch Insights / Kibana | Log querying and visualization |
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Logging Pipeline                                           │
+│                                                             │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────────────┐  │
+│  │ Backend  │───▶│ Fluent   │───▶│ CloudWatch Logs      │  │
+│  │ (Winston)│    │ Bit      │    │ or Elasticsearch     │  │
+│  └──────────┘    └──────────┘    └──────────────────────┘  │
+│                                            │                │
+│  ┌──────────┐                              ▼                │
+│  │ Frontend │    ┌──────────────────────────────────────┐  │
+│  │ (nginx)  │───▶│ Log Analysis & Dashboards            │  │
+│  └──────────┘    │ • CloudWatch Insights                │  │
+│                  │ • Kibana                             │  │
+│                  │ • Error tracking (Sentry)            │  │
+│                  └──────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Log Format (Structured JSON):**
+```json
+{
+  "timestamp": "2026-01-18T12:00:00.000Z",
+  "level": "info",
+  "service": "space2study-backend",
+  "traceId": "abc123",
+  "message": "User login successful",
+  "userId": "user_456",
+  "duration": 45,
+  "metadata": { "ip": "192.168.1.1", "userAgent": "..." }
+}
+```
+
+**Deliverables:**
+- [ ] Configure Winston with JSON format and log levels
+- [ ] Add request ID/trace ID for request correlation
+- [ ] Deploy Fluent Bit DaemonSet to EKS
+- [ ] Configure CloudWatch Logs log groups with retention
+- [ ] Create CloudWatch Insights queries for common patterns
+- [ ] Set up log-based alerts (error spikes, security events)
+- [ ] Document log schema and common queries
+
+**Log Levels:**
+| Level | Usage |
+|-------|-------|
+| error | Exceptions, failures requiring attention |
+| warn | Unexpected behavior, deprecations |
+| info | Business events, API requests |
+| debug | Development troubleshooting (disabled in prod) |
+
+**Status:** ⬜ Not Started
+
+> **Full Report:** [tasks/task-11-logging.md](tasks/task-11-logging.md)
+
+---
+
+### Task 12: Continuous Code Inspection (CCI)
+
+**Objective:** Implement continuous code quality analysis with SonarCloud
+
+**Stack:**
+| Component | Tool | Purpose |
+|-----------|------|---------|
+| Analysis | SonarCloud | Code quality, bugs, vulnerabilities, code smells |
+| Coverage | Jest + NYC | Test coverage reporting |
+| Quality Gate | SonarCloud | Automated PR quality checks |
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  CI/CD Pipeline with SonarCloud                             │
+│                                                             │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────────────┐  │
+│  │  GitHub  │───▶│  GitHub  │───▶│  SonarCloud          │  │
+│  │  Push/PR │    │  Actions │    │  Analysis            │  │
+│  └──────────┘    └──────────┘    └──────────────────────┘  │
+│                       │                    │                │
+│                       ▼                    ▼                │
+│              ┌──────────────┐    ┌──────────────────────┐  │
+│              │ Jest Tests   │    │ Quality Gate         │  │
+│              │ + Coverage   │    │ • Bugs: 0            │  │
+│              └──────────────┘    │ • Vulnerabilities: 0 │  │
+│                                  │ • Code Smells: <10   │  │
+│                                  │ • Coverage: >80%     │  │
+│                                  │ • Duplication: <3%   │  │
+│                                  └──────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Deliverables:**
+- [ ] Create SonarCloud organization and projects (backend, frontend)
+- [ ] Add sonar-project.properties to both repos
+- [ ] Update CI workflow with SonarCloud scanner
+- [ ] Configure quality gate rules
+- [ ] Enable PR decoration (comments on PRs)
+- [ ] Fix existing code quality issues
+- [ ] Document coding standards and quality requirements
+
+**Quality Gate Criteria:**
+| Metric | Threshold |
+|--------|-----------|
+| Bugs | 0 (new code) |
+| Vulnerabilities | 0 (new code) |
+| Code Smells | A rating |
+| Coverage | ≥80% on new code |
+| Duplications | ≤3% on new code |
+
+**Workflow Integration:**
+```yaml
+# .github/workflows/ci.yml addition
+- name: SonarCloud Scan
+  uses: SonarSource/sonarcloud-github-action@master
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+```
+
+**Status:** ⬜ Not Started
+
+> **Full Report:** [tasks/task-12-cci.md](tasks/task-12-cci.md)
+
+---
+
+### Task 13: Artifact Management
+
+**Objective:** Manage build artifacts with proper versioning and storage
+
+**Stack:**
+| Artifact Type | Storage | Purpose |
+|---------------|---------|---------|
+| Container Images | ECR / ghcr.io | Docker images |
+| npm Packages | npm Registry (private) | Shared libraries (if needed) |
+| Build Outputs | S3 | Static assets, reports |
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Artifact Flow                                              │
+│                                                             │
+│  ┌──────────┐    ┌──────────────────────────────────────┐  │
+│  │  CI/CD   │───▶│  Artifact Registries                 │  │
+│  │  Build   │    │  ┌────────────┐  ┌────────────────┐  │  │
+│  └──────────┘    │  │ ghcr.io    │  │ ECR (AWS)      │  │  │
+│       │          │  │ (dev/test) │  │ (production)   │  │  │
+│       │          │  └────────────┘  └────────────────┘  │  │
+│       │          └──────────────────────────────────────┘  │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Versioning Strategy                                  │  │
+│  │  • main branch  → :latest, :sha-abc123               │  │
+│  │  • tags (v1.0)  → :v1.0.0, :v1.0, :v1                │  │
+│  │  • PR builds    → :pr-123                            │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Deliverables:**
+- [ ] Implement semantic versioning for releases
+- [ ] Configure image tagging strategy (latest, sha, semver)
+- [ ] Set up ECR lifecycle policies (cleanup old images)
+- [ ] Configure ghcr.io retention policies
+- [ ] Create S3 bucket for build reports and coverage
+- [ ] Document artifact locations and access
+
+**Versioning Strategy:**
+| Branch/Tag | Image Tag | Retention |
+|------------|-----------|-----------|
+| main | :latest, :sha-{short} | Keep last 10 |
+| v*.*.* | :v1.2.3, :v1.2, :v1 | Keep all releases |
+| PR | :pr-{number} | Delete after merge |
+| feature/* | :feature-{name} | Delete after 7 days |
+
+**ECR Lifecycle Policy:**
+```json
+{
+  "rules": [
+    {
+      "rulePriority": 1,
+      "description": "Keep last 10 images",
+      "selection": {
+        "tagStatus": "any",
+        "countType": "imageCountMoreThan",
+        "countNumber": 10
+      },
+      "action": { "type": "expire" }
+    }
+  ]
+}
+```
+
+**Status:** ⬜ Not Started
+
+> **Full Report:** [tasks/task-13-artifact-management.md](tasks/task-13-artifact-management.md)
+
+---
+
+### Task 14: Scalability & Capacity Planning
+
+**Objective:** Monitor resource usage and implement auto-scaling for handling variable load
+
+**Stack:**
+| Component | Tool | Purpose |
+|-----------|------|---------|
+| Metrics | CloudWatch Metrics | CPU, memory, network monitoring |
+| Autoscaling | Kubernetes HPA | Horizontal Pod Autoscaler |
+| Cluster Scaling | Cluster Autoscaler / Karpenter | Node-level scaling |
+| Load Testing | k6 / Artillery | Performance and load testing |
+| Cost Analysis | AWS Cost Explorer | Resource cost tracking |
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Auto-Scaling Architecture                                  │
+│                                                             │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │  CloudWatch │───▶│    HPA      │───▶│  Scale Pods │     │
+│  │   Metrics   │    │ (CPU >70%)  │    │  (2 → 10)   │     │
+│  └─────────────┘    └─────────────┘    └─────────────┘     │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Horizontal Pod Autoscaler                           │   │
+│  │  • Min replicas: 2                                   │   │
+│  │  • Max replicas: 10                                  │   │
+│  │  • Target CPU: 70%                                   │   │
+│  │  • Scale-up: immediate                               │   │
+│  │  • Scale-down: 5 min stabilization                   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │  Cluster    │───▶│   Karpenter │───▶│ Scale Nodes │     │
+│  │  Pressure   │    │ (Provision) │    │  (2 → 5)    │     │
+│  └─────────────┘    └─────────────┘    └─────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Deliverables:**
+- [ ] Configure Kubernetes resource requests and limits for all pods
+- [ ] Deploy Horizontal Pod Autoscaler (HPA) for backend
+- [ ] Set up Cluster Autoscaler or Karpenter for node scaling
+- [ ] Create CloudWatch dashboards for resource utilization
+- [ ] Implement load testing with k6 or Artillery
+- [ ] Document scaling thresholds and capacity limits
+- [ ] Set up cost alerts and budgets in AWS
+- [ ] Create capacity planning document
+
+**Resource Configuration:**
+```yaml
+# Deployment resource config
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+```
+
+**HPA Configuration:**
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+```
+
+**Load Testing (k6):**
+```javascript
+// load-test.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export const options = {
+  stages: [
+    { duration: '2m', target: 100 },  // Ramp up
+    { duration: '5m', target: 100 },  // Steady state
+    { duration: '2m', target: 200 },  // Spike
+    { duration: '2m', target: 0 },    // Ramp down
+  ],
+};
+
+export default function () {
+  const res = http.get('https://api.space2study.com/health');
+  check(res, { 'status is 200': (r) => r.status === 200 });
+  sleep(1);
+}
+```
+
+**Key Metrics to Track:**
+| Metric | Warning | Critical | Action |
+|--------|---------|----------|--------|
+| CPU Utilization | >70% | >90% | Scale up pods |
+| Memory Utilization | >75% | >90% | Scale up pods |
+| Request Latency (p99) | >500ms | >1s | Investigate/scale |
+| Error Rate | >1% | >5% | Alert + investigate |
+| Pod Restarts | >3/hour | >10/hour | Investigate OOM |
+
+**Cost Optimization:**
+- Use Spot instances for non-critical workloads
+- Right-size instances based on actual usage
+- Implement pod disruption budgets
+- Schedule scale-down during off-peak hours
+
+**Status:** ⬜ Not Started
+
+> **Full Report:** [tasks/task-14-scalability.md](tasks/task-14-scalability.md)
+
+---
+
 ### Progress Tracking
 
 | Task | Status | Notes |
 |------|--------|-------|
-| 1. Setup Webapp | ✅ Completed | MongoDB (Docker), Backend/Frontend (native Node.js) |
-| 2. Containerization | ✅ Verified | All images built, tested, all 3 containers healthy |
-| 3. Infrastructure as Code | ⬜ Not Started | Vagrant + Ansible local provisioning |
-| 4. CI/CD Pipeline | ✅ Verified Working | GitHub Actions + ghcr.io (images built & pushed) |
+| 1. Setup Webapp | ✅ Complete | MongoDB (Docker), Backend/Frontend (native Node.js) |
+| 2. Containerization | ✅ Complete | All images built, tested, all 3 containers healthy |
+| 3. Infrastructure as Code | ✅ Complete | Vagrant + Ansible, VM at 192.168.10.10 |
+| 4. CI/CD Pipeline | ✅ Complete | GitHub Actions + ghcr.io (images built & pushed) |
 | 5. Load Balancing | ✅ Complete | 3 backend instances, nginx LB, failover working |
-| 6. Automation | ⬜ Not Started | |
-| 7. Kubernetes | ⬜ Not Started | |
-| 8. Cloud Migration | ⬜ Not Started | |
-| Monitoring | ⬜ Not Started | Winston configured |
-| Logging | ⬜ Not Started | Winston configured |
-| CCI | ⬜ Not Started | SonarCloud configured |
-| Artifact Management | ⬜ Not Started | |
+| 6. Automation | ✅ Complete | ops.sh, health-check.sh, backup.sh, restore.sh |
+| 7. Kubernetes (Local) | ⬜ Optional | minikube/kind local learning |
+| 8. Cloud Migration (AWS) | ✅ Complete | EKS, DocumentDB, ALB deployed and verified |
+| 9. Security Scanning | ✅ In Progress | Dependabot, CodeQL, Trivy configured; manual GitHub settings pending |
+| 10. Monitoring | ⬜ Not Started | Prometheus + Grafana, CloudWatch |
+| 11. Logging | ⬜ Not Started | Winston + Fluent Bit + CloudWatch Logs |
+| 12. CCI | ⬜ Not Started | SonarCloud integration |
+| 13. Artifact Management | ⬜ Not Started | ECR lifecycle, versioning strategy |
+| 14. Scalability | ⬜ Not Started | HPA, Cluster Autoscaler, load testing |
 
 ---
 
@@ -457,6 +1106,12 @@ docker stop space2study-backend-2
 | 2026-01-12 | Task 5 | Created nginx-lb.conf and docker-compose.lb.yml for load balancing |
 | 2026-01-12 | Task 5 | Deployed 3 backend instances + nginx LB on port 8080 |
 | 2026-01-12 | Task 5 | Verified least_conn algorithm and failover working |
+| 2026-01-14 | Task 3 | Created Vagrant + Ansible IaC, VM at 192.168.10.10 |
+| 2026-01-14 | Task 6 | Created automation scripts (ops.sh, health-check.sh, backup.sh, restore.sh) |
+| 2026-01-18 | Task 8 | Created Terraform infrastructure (11 files), K8s manifests (9 files), CI/CD workflows (3), scripts (4) |
+| 2026-01-18 | Task 8 | Deployed to AWS: EKS cluster, DocumentDB, ECR, ALB. All pods running, health checks passing |
+| 2026-01-18 | Task 8 | Verified deployment, then destroyed all resources to avoid costs. Task complete. |
+| 2026-01-21 | Task 9 | Added security scanning: dependabot.yml, security.yml (Trivy), codeql.yml to all repos |
 
 ---
 
@@ -471,4 +1126,8 @@ All detailed task completion reports are maintained in the `tasks/` directory:
 | Task 3: Infrastructure as Code | [tasks/task-03-iac.md](tasks/task-03-iac.md) |
 | Task 4: CI/CD Pipeline | [tasks/task-04-cicd.md](tasks/task-04-cicd.md) |
 | Task 5: Load Balancing | [tasks/task-05-load-balancing.md](tasks/task-05-load-balancing.md) |
+| Task 6: Automation | [tasks/task-06-automation.md](tasks/task-06-automation.md) |
+| Task 7: Kubernetes (Local) | Optional - local K8s learning |
+| Task 8: Cloud Migration (AWS) | [tasks/task-08-cloud-migration.md](tasks/task-08-cloud-migration.md) |
+| Task 9: Security Scanning | [tasks/task-09-security.md](tasks/task-09-security.md) |
 
