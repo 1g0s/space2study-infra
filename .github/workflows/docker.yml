@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout infra repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout backend repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: DevOps-ProjectLevel/space2study-backend-1g0s
           token: ${{ secrets.CHECKOUT_TOKEN }}
@@ -64,10 +64,10 @@ jobs:
 
     steps:
       - name: Checkout infra repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout frontend repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: DevOps-ProjectLevel/space2study-frontend-1g0s
           token: ${{ secrets.CHECKOUT_TOKEN }}
