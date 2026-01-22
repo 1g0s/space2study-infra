@@ -1121,6 +1121,7 @@ export default function () {
 | 2026-01-18 | Task 8 | Verified deployment, then destroyed all resources to avoid costs. Task complete. |
 | 2026-01-21 | Task 9 | Added security scanning: dependabot.yml, security.yml (Trivy) to all repos |
 | 2026-01-21 | Task 9 | Fixed workflow errors: removed CodeQL (needs Code Scanning), removed SARIF uploads, removed dependency-review (needs Dependency Graph). All security.yml workflows now passing. |
+| 2026-01-22 | Task 9 | Dependabot verified working: merged PRs #1 (docker/build-push-action v6), #2 (actions/checkout v6); closed #3 (codeql-action not used) |
 
 ---
 
